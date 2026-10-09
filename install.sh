@@ -33,17 +33,22 @@ section() { echo -e "\n${C_BOLD}${C_SKY}$*${C_RESET}"; }
 
 # --- CLI Options Parsing ---
 AUTO_CONFIRM=false
+FORCE_BUILD=false
 for arg in "$@"; do
     case "$arg" in
         -y|--yes)
             AUTO_CONFIRM=true
             ;;
+        -b|--build|--from-source)
+            FORCE_BUILD=true
+            ;;
         -h|--help)
             echo "Usage: ./install.sh [OPTIONS]"
             echo
             echo "Options:"
-            echo "  -y, --yes    Automatic yes to prompts (non-interactive)"
-            echo "  -h, --help   Show this help message"
+            echo "  -y, --yes          Automatic yes to prompts (non-interactive)"
+            echo "  -b, --build        Force build from source with cargo"
+            echo "  -h, --help         Show this help message"
             exit 0
             ;;
     esac
@@ -179,11 +184,50 @@ suggest_and_install_packages() {
     exit 1
 }
 
+# --- Download Official Release Binary ---
+download_prebuilt_binary() {
+    local release_ver="1.0.0"
+    local tar_url="https://github.com/dezaetterg/echo-terminal-center/releases/download/v${release_ver}/echo-terminal-${release_ver}-x86_64.tar.gz"
+    local temp_dir
+    temp_dir="$(mktemp -d -t echo-bin-XXXXXX 2>/dev/null || mktemp -d)"
+
+    info "Fetching official release binary (v${release_ver}) from GitHub..."
+    local dl_ok=false
+    if command -v curl >/dev/null 2>&1; then
+        if curl -fSL --progress-bar "$tar_url" -o "$temp_dir/release.tar.gz" 2>/dev/null; then
+            dl_ok=true
+        fi
+    elif command -v wget >/dev/null 2>&1; then
+        if wget -q --show-progress "$tar_url" -O "$temp_dir/release.tar.gz" 2>/dev/null; then
+            dl_ok=true
+        fi
+    fi
+
+    if [ "$dl_ok" = true ] && [ -f "$temp_dir/release.tar.gz" ]; then
+        if tar -xzf "$temp_dir/release.tar.gz" -C "$temp_dir" 2>/dev/null; then
+            local extracted_bin
+            extracted_bin="$(find "$temp_dir" -type f -name "echo-terminal" -perm /111 2>/dev/null | head -n1)"
+            if [ -n "$extracted_bin" ] && [ -x "$extracted_bin" ]; then
+                cp "$extracted_bin" "$SCRIPT_DIR/echo-terminal"
+                chmod +x "$SCRIPT_DIR/echo-terminal"
+                rm -rf "$temp_dir"
+                PREBUILT_BIN="$SCRIPT_DIR/echo-terminal"
+                info "Release binary downloaded and verified successfully."
+                return 0
+            fi
+        fi
+    fi
+
+    rm -rf "$temp_dir"
+    warn "Could not retrieve pre-compiled binary from GitHub."
+    return 1
+}
+
 # --- Dependencies Verification ---
 check_and_resolve_dependencies() {
     section "Checking Build & Runtime Dependencies:"
 
-    # Check if precompiled binary already exists
+    # Check if precompiled binary already exists locally
     PREBUILT_BIN=""
     if [ -f "$SCRIPT_DIR/echo-terminal" ] && [ -x "$SCRIPT_DIR/echo-terminal" ]; then
         PREBUILT_BIN="$SCRIPT_DIR/echo-terminal"
@@ -191,8 +235,17 @@ check_and_resolve_dependencies() {
         PREBUILT_BIN="$SCRIPT_DIR/target/release/echo-terminal"
     fi
 
+    # Try downloading official release binary if not present and not forced to compile
+    if [ -z "$PREBUILT_BIN" ] && [ "$FORCE_BUILD" = false ]; then
+        if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
+            if download_prebuilt_binary; then
+                PREBUILT_BIN="$SCRIPT_DIR/echo-terminal"
+            fi
+        fi
+    fi
+
     if [ -n "$PREBUILT_BIN" ]; then
-        info "Pre-compiled release binary detected ($PREBUILT_BIN)."
+        info "Pre-compiled release binary ready ($PREBUILT_BIN)."
     else
         # If cargo is in ~/.cargo/bin, ensure it is available in this subshell
         if ! command -v cargo >/dev/null 2>&1; then
@@ -208,26 +261,49 @@ check_and_resolve_dependencies() {
         if command -v cargo > /dev/null 2>&1 && command -v rustc > /dev/null 2>&1; then
             RUSTC_VER="$(rustc --version 2>&1 | awk '{print $2}')"
             CARGO_VER="$(cargo --version 2>&1 | awk '{print $2}')"
-            info "Rust toolchain found (rustc ${RUSTC_VER}, cargo ${CARGO_VER})."
+            local major minor
+            major="$(echo "$RUSTC_VER" | cut -d. -f1)"
+            minor="$(echo "$RUSTC_VER" | cut -d. -f2)"
+            if [ "$major" -eq 1 ] && [ "$minor" -lt 85 ]; then
+                warn "Installed rustc (${RUSTC_VER}) is older than 1.85.0 (Debian/Ubuntu/Mint repository version)."
+                warn "Modern TUI dependencies require Rust >= 1.85."
+                info "Downloading official pre-compiled release binary instead..."
+                if download_prebuilt_binary; then
+                    PREBUILT_BIN="$SCRIPT_DIR/echo-terminal"
+                else
+                    err "Cannot build with rustc ${RUSTC_VER}. Please update Rust via rustup:"
+                    err "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+                    exit 1
+                fi
+            else
+                info "Rust toolchain found (rustc ${RUSTC_VER}, cargo ${CARGO_VER})."
+            fi
         else
             err "Rust toolchain (cargo / rustc) not found."
-            MISSING_REQUIRED+=("rust")
+            info "Attempting to download official pre-compiled release binary..."
+            if download_prebuilt_binary; then
+                PREBUILT_BIN="$SCRIPT_DIR/echo-terminal"
+            else
+                MISSING_REQUIRED+=("rust")
+            fi
         fi
 
-        # 2. C Compiler / Linker
-        if command -v cc > /dev/null 2>&1 || command -v gcc > /dev/null 2>&1 || command -v clang > /dev/null 2>&1; then
-            CC_NAME="$(cc --version 2>/dev/null | head -n1 || gcc --version 2>/dev/null | head -n1 || clang --version 2>/dev/null | head -n1 || echo 'C compiler')"
-            info "C linker found (${CC_NAME%% *})."
-        else
-            warn "C linker (gcc/clang) not found in PATH."
-            MISSING_REQUIRED+=("cc")
-        fi
+        # 2. C Compiler / Linker (only required when building from source)
+        if [ -z "$PREBUILT_BIN" ]; then
+            if command -v cc > /dev/null 2>&1 || command -v gcc > /dev/null 2>&1 || command -v clang > /dev/null 2>&1; then
+                CC_NAME="$(cc --version 2>/dev/null | head -n1 || gcc --version 2>/dev/null | head -n1 || clang --version 2>/dev/null | head -n1 || echo 'C compiler')"
+                info "C linker found (${CC_NAME%% *})."
+            else
+                warn "C linker (gcc/clang) not found in PATH."
+                MISSING_REQUIRED+=("cc")
+            fi
 
-        # Handle Missing Required Dependencies
-        if [ ${#MISSING_REQUIRED[@]} -gt 0 ]; then
-            echo
-            err "Required build tools are missing."
-            suggest_and_install_packages "${MISSING_REQUIRED[@]}"
+            # Handle Missing Required Dependencies
+            if [ ${#MISSING_REQUIRED[@]} -gt 0 ]; then
+                echo
+                err "Required build tools are missing."
+                suggest_and_install_packages "${MISSING_REQUIRED[@]}"
+            fi
         fi
     fi
 
@@ -283,7 +359,10 @@ perform_installation() {
 
     # 2. Determine or Build Binary
     local source_bin=""
-    if [ -f "$SCRIPT_DIR/echo-terminal" ] && [ -x "$SCRIPT_DIR/echo-terminal" ]; then
+    if [ -n "${PREBUILT_BIN:-}" ] && [ -f "$PREBUILT_BIN" ] && [ -x "$PREBUILT_BIN" ]; then
+        source_bin="$PREBUILT_BIN"
+        info "Using release binary ($source_bin)."
+    elif [ -f "$SCRIPT_DIR/echo-terminal" ] && [ -x "$SCRIPT_DIR/echo-terminal" ]; then
         source_bin="$SCRIPT_DIR/echo-terminal"
         info "Using pre-compiled binary ($source_bin)."
     elif [ -f "$SCRIPT_DIR/target/release/echo-terminal" ] && [ -x "$SCRIPT_DIR/target/release/echo-terminal" ]; then

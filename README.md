@@ -61,11 +61,9 @@ Built with Rust and [Ratatui](https://github.com/ratatui/ratatui), it reads dire
 
 ---
 
-### Installation
+#### Method 1: Automated Installer (Recommended)
 
-#### Method 1: Interactive Installer (Recommended)
-
-Clone the repository and run the automated installation script:
+Clone the repository and run the installer script:
 
 ```bash
 git clone https://github.com/dezaetterg/echo-terminal-center.git
@@ -74,27 +72,23 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Non-interactive automated install:
+- **Instant install**: Automatically downloads and installs the official optimized release binary without requiring compiler toolchains or `sudo`.
+- **Compile option**: Pass `-b` or `--build` if you prefer to compile from source with Cargo (requires Rust 1.85+).
+- **System integration**: Deploys `echo-terminal` to `~/.local/bin/` and registers desktop entry (`echo-terminal.desktop`) with high-resolution app icon.
+
+#### Method 2: Official `.deb` Package (Linux Mint / Ubuntu / Debian)
+
+Fastest setup for Debian-based distributions without cloning or compiling:
+
 ```bash
-./install.sh -y
-```
-
-The script will:
-- Check and install required build dependencies (Rust/Cargo).
-- Compile the optimized release binary.
-- Install `echo-terminal` to `~/.local/bin/echo-terminal`.
-- Set up a desktop entry (`~/.local/share/applications/echo-terminal.desktop`) and application icon so you can launch it directly from your desktop application launcher.
-
-#### Method 2: Pre-Built Release Packages
-
-Download the latest release binaries and packages from [GitHub Releases](https://github.com/dezaetterg/echo-terminal-center/releases):
-
-##### Debian / Ubuntu / Linux Mint / PikaOS (`.deb`):
-```bash
+wget https://github.com/dezaetterg/echo-terminal-center/releases/download/v1.0.0/echo-terminal_1.0.0_amd64.deb
 sudo dpkg -i echo-terminal_1.0.0_amd64.deb
 ```
 
-##### Standalone Tarball (`.tar.gz` or `.tar.zst`):
+#### Method 3: Pre-Built Release Tarball (`.tar.gz` or `.tar.zst`)
+
+Download portable standalone binaries from [GitHub Releases](https://github.com/dezaetterg/echo-terminal-center/releases):
+
 ```bash
 # Extract
 tar -xzf echo-terminal-1.0.0-x86_64.tar.gz
@@ -110,9 +104,9 @@ install -Dm755 echo-terminal ~/.local/bin/echo-terminal
 sha256sum -c SHA256SUMS
 ```
 
-#### Method 3: Build from Source with Cargo
+#### Method 4: Build from Source with Cargo
 
-Requires **Rust 1.75+**:
+Requires **Rust 1.85+** (install via [rustup](https://rustup.rs)):
 
 ```bash
 git clone https://github.com/dezaetterg/echo-terminal-center.git
@@ -221,7 +215,7 @@ All external system tools are purely optional. If a tool is missing, Echo Termin
 
 ### Установка
 
-#### Способ 1: Интерактивный установщик (Рекомендуется)
+#### Способ 1: Автоматический установщик (Рекомендуется)
 
 Клонируйте репозиторий и запустите скрипт установки:
 
@@ -232,27 +226,23 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Для автоматической установки без интерактивных запросов:
+- **Мгновенная установка**: Скрипт автоматически скачивает и устанавливает официальный нативный бинарник без необходимости компиляции, установки тулчейна Rust или прав `sudo`.
+- **Сборка из исходников**: Если вы хотите собрать проект самостоятельно через Cargo, передайте флаг `-b` или `--build` (требуется Rust 1.85+).
+- **Интеграция в систему**: Бинарник копируется в `~/.local/bin/echo-terminal`, создаётся ярлык приложения (`echo-terminal.desktop`) и устанавливается иконка высокого разрешения.
+
+#### Способ 2: Официальный `.deb` пакет (Linux Mint / Ubuntu / Debian)
+
+Самый быстрый способ установки для Debian-подобных систем без клонирования и компиляции:
+
 ```bash
-./install.sh -y
-```
-
-Скрипт выполнит:
-- Проверку и установку необходимых зависимостей сборки (Rust/Cargo).
-- Сборку оптимизированного release-бинарника.
-- Установку исполняемого файла в `~/.local/bin/echo-terminal`.
-- Создание `.desktop` ярлыка (`~/.local/share/applications/echo-terminal.desktop`) и иконки для удобного запуска из меню приложений вашей рабочей среды.
-
-#### Способ 2: Готовые пакеты из релизов
-
-Готовые пакеты и контрольные суммы доступны на странице [GitHub Releases](https://github.com/dezaetterg/echo-terminal-center/releases):
-
-##### Для Debian / Ubuntu / Linux Mint / PikaOS (`.deb`):
-```bash
+wget https://github.com/dezaetterg/echo-terminal-center/releases/download/v1.0.0/echo-terminal_1.0.0_amd64.deb
 sudo dpkg -i echo-terminal_1.0.0_amd64.deb
 ```
 
-##### Готовый архив (`.tar.gz` или `.tar.zst`):
+#### Способ 3: Готовые портативные архивы (`.tar.gz` или `.tar.zst`)
+
+Скачайте релизный архив со страницы [GitHub Releases](https://github.com/dezaetterg/echo-terminal-center/releases):
+
 ```bash
 # Распаковка
 tar -xzf echo-terminal-1.0.0-x86_64.tar.gz
@@ -268,9 +258,9 @@ install -Dm755 echo-terminal ~/.local/bin/echo-terminal
 sha256sum -c SHA256SUMS
 ```
 
-#### Способ 3: Сборка из исходного кода через Cargo
+#### Способ 4: Сборка из исходного кода через Cargo
 
-Требуется **Rust 1.75+**:
+Требуется **Rust 1.85+** (рекомендуется установка через [rustup](https://rustup.rs)):
 
 ```bash
 git clone https://github.com/dezaetterg/echo-terminal-center.git
