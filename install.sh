@@ -291,8 +291,17 @@ perform_installation() {
         info "Using existing release build ($source_bin)."
     else
         cd "$SCRIPT_DIR"
+        # Compatibility fix: older Cargo (< 1.78, e.g. 1.75 on Ubuntu/Mint) rejects lockfile version 4
+        if [ -f "$SCRIPT_DIR/Cargo.lock" ] && grep -q "version = 4" "$SCRIPT_DIR/Cargo.lock" 2>/dev/null; then
+            sed -i 's/version = 4/version = 3/' "$SCRIPT_DIR/Cargo.lock" 2>/dev/null || true
+        fi
+
         info "Compiling optimized release binary (cargo build --release)..."
-        cargo build --release
+        if ! cargo build --release; then
+            warn "Cargo build failed with current lockfile. Regenerating Cargo.lock..."
+            rm -f "$SCRIPT_DIR/Cargo.lock"
+            cargo build --release
+        fi
         source_bin="$SCRIPT_DIR/target/release/echo-terminal"
     fi
 
