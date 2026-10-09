@@ -1,0 +1,13 @@
+pub mod cpu;
+pub mod de;
+pub mod disk;
+pub mod display;
+pub mod distro;
+pub mod gpu;
+pub mod host;
+pub mod kernel;
+pub mod memory;
+pub mod os;
+pub mod packages;
+pub mod shell;
+pub mod uptime;

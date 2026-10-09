@@ -1,0 +1,27 @@
+[package]
+name = "echo-terminal-center"
+version = "1.0.0"
+edition = "2021"
+description = "Terminal control center and system information utility for Linux"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+repository = "https://github.com/echo-linux/echo-terminal-center"
+keywords = ["tui", "system-monitor", "linux", "package-manager", "terminal"]
+categories = ["command-line-utilities", "os::linux-apis"]
+
+[[bin]]
+name = "echo-terminal"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+ratatui = "0.29"
+crossterm = "0.28"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
