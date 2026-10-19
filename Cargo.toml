@@ -2,10 +2,12 @@
 name = "echo-terminal-center"
 version = "1.0.0"
 edition = "2021"
+rust-version = "1.74"
 description = "Terminal control center and system information utility for Linux"
 license = "GPL-3.0-or-later"
 readme = "README.md"
-repository = "https://github.com/echo-linux/echo-terminal-center"
+repository = "https://github.com/dezaetterg/echo-terminal-center"
+homepage = "https://github.com/dezaetterg/echo-terminal-center"
 keywords = ["tui", "system-monitor", "linux", "package-manager", "terminal"]
 categories = ["command-line-utilities", "os::linux-apis"]
 
@@ -19,6 +21,13 @@ ratatui = "0.29"
 crossterm = "0.28"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.11"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"
 
 [profile.release]
 opt-level = 3

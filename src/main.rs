@@ -5,13 +5,15 @@ mod logo_data;
 mod report;
 mod tui;
 
+use anyhow::{bail, Context, Result};
 use i18n::I18n;
 use report::SystemReport;
 use std::env;
 use std::io::IsTerminal;
-use std::process;
 
-fn main() {
+fn main() -> Result<()> {
+    env_logger::init();
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 {
@@ -20,60 +22,49 @@ fn main() {
                 let i18n = I18n::detect();
                 let report = SystemReport::collect();
                 layout::render(&report, &i18n);
-                return;
+                return Ok(());
             }
             "--json" => {
                 let report = SystemReport::collect();
-                match report.to_json() {
-                    Ok(json) => println!("{json}"),
-                    Err(e) => {
-                        eprintln!("Error serializing report to JSON: {e}");
-                        process::exit(1);
-                    }
-                }
-                return;
+                let json = report.to_json().context("serializing report to JSON")?;
+                println!("{json}");
+                return Ok(());
             }
             "--short" => {
                 let report = SystemReport::collect();
                 println!("{}", report.to_short());
-                return;
+                return Ok(());
             }
             "-h" | "--help" => {
                 print_help();
-                return;
+                return Ok(());
             }
             "-V" | "--version" => {
                 println!("echo-terminal {}", env!("CARGO_PKG_VERSION"));
-                return;
+                return Ok(());
             }
             unknown => {
-                eprintln!("Unknown argument: {unknown}");
-                print_help();
-                process::exit(1);
+                bail!("unknown argument: {unknown}\n\nRun `echo-terminal --help` for usage.");
             }
         }
     }
 
-    // Default: TUI mode
     if !std::io::stdout().is_terminal() {
-        eprintln!("Error: stdout is not a TTY. Use --json, --short, or 'echo-terminal fetch' for scripts.");
-        process::exit(1);
+        bail!("stdout is not a TTY — use --json, --short, or 'echo-terminal fetch' for scripts");
     }
 
-    // TUI entrypoint
     let i18n = I18n::detect();
-    if let Err(e) = tui::run(&i18n) {
-        eprintln!("Terminal error: {e}");
-        process::exit(1);
-    }
+    tui::run(&i18n).context("TUI runtime error")?;
+
+    Ok(())
 }
 
 fn print_help() {
-    println!("echo-terminal - System Center & Information for Echo\n");
+    println!("echo-terminal — System Center & Information\n");
     println!("USAGE:");
     println!("    echo-terminal [COMMAND | OPTIONS]\n");
     println!("COMMANDS:");
-    println!("    fetch            Print system information card directly to terminal\n");
+    println!("    fetch            Print system information card to terminal\n");
     println!("OPTIONS:");
     println!("    --json           Print system information as JSON");
     println!("    --short          Print compact one-line summary (for scripts / status bars)");
